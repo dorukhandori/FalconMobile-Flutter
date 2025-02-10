@@ -14,6 +14,8 @@ class LoginPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authControllerProvider);
+
     ref.listen<AuthState>(authControllerProvider, (previous, current) {
       if (current is AuthSuccess) {
         // Başarılı giriş durumunda SnackBar göster
@@ -97,6 +99,8 @@ class LoginPage extends ConsumerWidget {
               ),
             ),
           ),
+          if (authState is AuthLoading)
+            const LoadingIndicator(), // Loading indicator'ı göster
           Positioned(
             bottom:
                 MediaQuery.of(context).size.height * 0.1, // Daha yukarı çektik

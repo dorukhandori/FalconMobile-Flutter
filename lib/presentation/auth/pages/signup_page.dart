@@ -4,6 +4,7 @@ import 'package:auth_app/data/services/auth_service.dart';
 import 'package:auth_app/domain/models/register_params.dart';
 import 'package:auth_app/core/di/injection.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:auth_app/presentation/auth/pages/login_page.dart';
 
 class SignUpPage extends ConsumerStatefulWidget {
   const SignUpPage({super.key});
@@ -116,24 +117,57 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
   XFile? signatureDeclarationFile;
 
   void register() async {
-    final authService = getIt<AuthService>();
-    final registerParams = RegisterParams(
-      customerType: selectedCustomerType == 'KURUMSAL'
-          ? 1
-          : selectedCustomerType == 'BİREYSEL'
-              ? 2
-              : 3,
-      fullName: fullNameController.text,
-      email: emailController.text,
-      phone: phoneController.text,
-      taxOffice: taxOfficeController.text,
-      taxNumber: taxNumberController.text,
-      address: addressController.text,
-      city: selectedCity ?? '', // Use empty string if null
-      postalCode: postalCodeController.text,
-    );
+    try {
+      final authService = getIt<AuthService>();
+      final registerParams = RegisterParams(
+        customerType: selectedCustomerType == 'KURUMSAL' ? 1 : 2,
+        fullName: fullNameController.text,
+        email: emailController.text,
+        phone: phoneController.text,
+        taxOffice: taxOfficeController.text,
+        taxNumber: taxNumberController.text,
+        isAccessories: selectedActivities[0],
+        isService: selectedActivities[1],
+        isAvm: selectedActivities[2],
+        isOil: selectedActivities[3],
+        isOto: selectedActivities[4],
+        isMarket: selectedActivities[5],
+        address: addressController.text,
+        address2: streetController.text,
+        country: 'Türkiye',
+        city: selectedCity ?? '',
+        region: '',
+        postalCode: postalCodeController.text,
+        filePath1: tradeRegistryFile?.path ?? '',
+        filePath2: activityDocumentFile?.path ?? '',
+        filePath3: taxCertificateFile?.path ?? '',
+        filePath4: signatureDeclarationFile?.path ?? '',
+      );
 
-    // API isteğini gönderin
+      await authService.register(registerParams);
+
+      // Başarılı kayıt sonrası işlemler
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kayıt işlemi başarılı!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Kullanıcıyı login ekranına yönlendir
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const LoginPage(),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Kayıt işlemi başarısız: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> pickFile(String type) async {

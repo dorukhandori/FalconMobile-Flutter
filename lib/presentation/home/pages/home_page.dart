@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:auth_app/presentation/auth/pages/login_page.dart';
 import 'package:auth_app/domain/models/user.dart';
+import 'package:auth_app/presentation/auth/controllers/auth_controller.dart';
 
 class HomePage extends ConsumerWidget {
   final User user;
@@ -16,8 +18,13 @@ class HomePage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
-              // TODO: Implement logout
-              Navigator.of(context).pop();
+              ref.read(authControllerProvider.notifier).logout();
+
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => const LoginPage(),
+                ),
+              );
             },
           ),
         ],

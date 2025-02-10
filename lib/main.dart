@@ -4,8 +4,9 @@ import 'package:auth_app/core/di/injection.dart';
 import 'package:auth_app/presentation/auth/pages/login_page.dart';
 import 'package:auth_app/presentation/auth/pages/signup_page.dart';
 
-void main() {
-  configureDependencies();
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await configureDependencies();
   runApp(const ProviderScope(child: MyApp()));
 }
 

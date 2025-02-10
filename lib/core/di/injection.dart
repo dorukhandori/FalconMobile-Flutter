@@ -19,7 +19,10 @@ Future<void> configureDependencies() async {
   getIt.registerSingleton<SharedPreferences>(prefs);
 
   // Diğer bağımlılıkları kaydet
-  getIt.registerSingleton(AuthService(getIt()));
+  getIt.registerSingleton(DioClient.getInstance());
+  getIt.registerSingleton(AuthService(getIt<Dio>()));
+  getIt.registerSingleton<AuthRepository>(
+      AuthRepositoryImpl(getIt<AuthService>()));
 }
 
 @module

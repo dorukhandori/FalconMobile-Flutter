@@ -32,8 +32,12 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> logout() {
-    // TODO: implement logout
-    throw UnimplementedError();
+  Future<Either<Failure, void>> logout() async {
+    try {
+      await authService.logout();
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 }

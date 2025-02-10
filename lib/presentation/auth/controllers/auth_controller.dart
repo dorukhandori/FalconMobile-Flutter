@@ -59,4 +59,8 @@ class AuthController extends StateNotifier<AuthState> {
       state = AuthError(e.toString());
     }
   }
+
+  void logout() {
+    state = const AuthInitial(); // State'i sıfırla
+  }
 }

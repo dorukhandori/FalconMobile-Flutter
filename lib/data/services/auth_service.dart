@@ -52,7 +52,7 @@ class AuthService {
         options: Options(
           headers: {
             'accept': '*/*',
-            'xcmzkey': 'YOUR_API_KEY', // API anahtarınızı buraya ekleyin
+            'xcmzkey': _xcmzKey,
             'Content-Type': 'application/json',
           },
         ),
@@ -63,17 +63,45 @@ class AuthService {
           "phone": params.phone,
           "taxOffice": params.taxOffice,
           "taxNumber": params.taxNumber,
+          "isAccessories": params.isAccessories ? 1 : 0,
+          "isService": params.isService ? 1 : 0,
+          "isAvm": params.isAvm ? 1 : 0,
+          "isOil": params.isOil ? 1 : 0,
+          "isOto": params.isOto ? 1 : 0,
+          "isMarket": params.isMarket ? 1 : 0,
           "address": params.address,
+          "address2": params.address2,
+          "country": params.country,
           "city": params.city,
+          "region": params.region,
           "postalCode": params.postalCode,
-          // Diğer alanlar...
+          "filePath1": params.filePath1,
+          "filePath2": params.filePath2,
+          "filePath3": params.filePath3,
+          "filePath4": params.filePath4,
         },
       );
 
-      // Yanıtı işleyin
+      if (response.statusCode != 200) {
+        throw Exception('API Error: ${response.statusCode}');
+      }
     } catch (e) {
-      // Hata durumunu yönetin
       throw Exception('Kayıt işlemi başarısız: $e');
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      await _dio.post(
+        '/v1/Logout',
+        options: Options(
+          headers: {
+            'xcmzkey': _xcmzKey,
+          },
+        ),
+      );
+    } catch (e) {
+      throw Exception('Logout işlemi başarısız: $e');
     }
   }
 }
