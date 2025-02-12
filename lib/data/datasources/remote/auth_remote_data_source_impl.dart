@@ -116,4 +116,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<void> logout() {
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> someApiCall({Options? options}) async {
+    final response = await _dio.post(
+      '/v1/someEndpoint', // Uygun endpoint'i buraya yazın
+      options: options ?? Options(), // options parametresini kullan
+    );
+    // Yanıtı işleyin
+  }
 }

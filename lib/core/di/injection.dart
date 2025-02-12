@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:auth_app/data/datasources/remote/auth_remote_data_source.dart';
 import 'package:auth_app/data/datasources/remote/auth_remote_data_source_impl.dart';
 import 'package:auth_app/data/services/upload_service.dart';
+import 'package:auth_app/presentation/language/controllers/language_controller.dart';
 
 final getIt = GetIt.instance;
 
@@ -37,11 +38,15 @@ Future<void> configureDependencies() async {
   getIt.registerSingleton<AuthRepository>(
       AuthRepositoryImpl(getIt<AuthService>()));
 
-  getIt.registerSingleton(LanguageService(dio));
+  getIt.registerSingleton<LanguageService>(LanguageService(dio));
   getIt.registerSingleton(CurrencyService(dio));
 
   // Upload Service kaydı
   getIt.registerSingleton<UploadService>(UploadService(dio));
+
+  // LanguageController kaydı
+  getIt.registerSingleton<LanguageController>(
+      LanguageController(getIt<LanguageService>()));
 }
 
 @module
