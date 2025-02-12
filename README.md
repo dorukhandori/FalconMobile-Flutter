@@ -9,21 +9,25 @@ Bu proje, B2B e-ticaret işlemleri için geliştirilmiş bir Flutter uygulaması
 - **Sepet Yönetimi**: Kullanıcıların sepetlerini yönetme
 - **Sipariş Takibi**: Siparişlerin durumunu takip etme
 - **Dosya Yükleme**: Gerekli belgeleri yükleme
+- **Döviz Yönetimi**: Güncel döviz kurlarını görüntüleme
 
 ## Kurulum
 
-1. Projeyi klonlayın:
-   ```bash
-   git clone https://github.com/your-username/your-repo-name.git
-   ```
-2. Bağımlılıkları yükleyin:
-   ```bash
-   flutter pub get
-   ```
-3. Uygulamayı çalıştırın:
-   ```bash
-   flutter run
-   ```
+### 1. Projeyi Klonlayın
+```bash
+git clone https://github.com/dorukhandori/FalconMobile-Flutter.git
+```
+
+### 2. Gerekli Bağımlılıkları Yükleyin
+```bash
+cd your-repo-name
+flutter pub get
+```
+
+### 3. Uygulamayı Çalıştırın
+```bash
+flutter run
+```
 
 ## Kullanılan Teknolojiler
 
@@ -32,11 +36,31 @@ Bu proje, B2B e-ticaret işlemleri için geliştirilmiş bir Flutter uygulaması
 - **Dio**: HTTP client
 - **GetIt**: Dependency injection
 - **Image Picker**: Dosya yükleme
+- **Shared Preferences**: Kullanıcı ayarlarını saklama
 
-## Ekran Görüntüleri
+## API Entegrasyonu
 
-![Login Screen](screenshots/login.png)
-![Register Screen](screenshots/register.png)
+### Döviz Listesi
+Döviz bilgilerini almak için aşağıdaki API kullanılır:
+```bash
+curl -X 'POST' \
+  'https://testapi.epic-soft.net/v1/Login/getCurrencyList' \
+  -H 'accept: */*' \
+  -H 'xcmzkey: API_KEY' \
+  -H 'Accept-Language: tr' \
+  -d ''
+```
+
+### Kullanıcı Girişi
+Kullanıcı girişi için aşağıdaki API kullanılır:
+```bash
+curl -X 'POST' \
+  'https://testapi.epic-soft.net/v1/Login/token' \
+  -H 'accept: */*' \
+  -H 'xcmzkey: API_KEY' \
+  -d '{"customerCode": "your_code", "password": "your_password"}'
+```
+
 
 ## Katkıda Bulunma
 
