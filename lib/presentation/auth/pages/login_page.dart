@@ -8,47 +8,41 @@ import 'package:auth_app/presentation/auth/pages/home_redirect.dart';
 import 'package:auth_app/presentation/auth/pages/error_view.dart';
 import 'package:auth_app/presentation/auth/pages/signup_page.dart';
 import 'package:auth_app/presentation/home/pages/home_page.dart';
+import 'package:auth_app/presentation/common/widgets/app_bar.dart';
+import 'package:auth_app/presentation/auth/controllers/signup_state.dart';
+import 'package:auth_app/domain/models/login_params.dart';
 
-class LoginPage extends ConsumerWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authControllerProvider);
+  ConsumerState<LoginPage> createState() => _LoginPageState();
+}
 
-    ref.listen<AuthState>(authControllerProvider, (previous, current) {
-      if (current is AuthSuccess) {
-        // Başarılı giriş durumunda SnackBar göster
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Giriş başarılı!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+class _LoginPageState extends ConsumerState<LoginPage> {
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(authControllerProvider);
+    final authController = ref.read(authControllerProvider.notifier);
 
-        // Kısa bir gecikme sonrası ana sayfaya yönlendir
-        Future.delayed(const Duration(seconds: 2), () {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => HomePage(user: current.user),
-            ),
+    ref.listen<SignupState>(authControllerProvider, (previous, current) {
+      current.when(
+        initial: () {},
+        loading: () {},
+        success: () {
+          Navigator.pushReplacementNamed(context, '/home');
+        },
+        error: (message) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
           );
-        });
-      } else if (current is AuthError) {
-        // Hata durumunda SnackBar göster
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(current.message),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
+        },
+      );
     });
 
     return Scaffold(
-      backgroundColor: Colors.transparent, // Arka planı şeffaf yap
+      appBar: const CustomAppBar(),
+      backgroundColor: Colors.transparent,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -57,16 +51,15 @@ class LoginPage extends ConsumerWidget {
             fit: BoxFit.cover,
           ),
           Container(
-            color: Colors.black54, // Arka planı karartmak için
+            color: Colors.black54,
           ),
           Center(
             child: SingleChildScrollView(
               child: Container(
                 padding: const EdgeInsets.all(20.0),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8), // Şeffaflık ekledik
-                  borderRadius:
-                      BorderRadius.circular(15), // Kenarları yuvarladık
+                  color: Colors.white.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(15),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black26,
@@ -80,7 +73,7 @@ class LoginPage extends ConsumerWidget {
                   children: [
                     Image.asset(
                       'assets/images/epic_soft_logo.png',
-                      height: 100, // Logo boyutunu ayarlayın
+                      height: 100,
                     ),
                     const SizedBox(height: 20),
                     const Text(
@@ -99,39 +92,31 @@ class LoginPage extends ConsumerWidget {
               ),
             ),
           ),
-          if (authState is AuthLoading)
-            const LoadingIndicator(), // Loading indicator'ı göster
+          if (state == SignupState.loading()) const LoadingIndicator(),
           Positioned(
-            bottom:
-                MediaQuery.of(context).size.height * 0.1, // Daha yukarı çektik
-            left: MediaQuery.of(context).size.width * 0.1,
-            right: MediaQuery.of(context).size.width * 0.1,
-            child: Column(
-              children: [
-                const SizedBox(height: 30), // Butonlar arası boşluk
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const SignUpPage()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: const Text(
-                    'Yeni Kayıt Oluştur',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+            bottom: 20,
+            left: 20,
+            right: 20,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SignUpPage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
+                elevation: 2,
+              ),
+              child: const Text(
+                'Yeni Kayıt Oluştur',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],

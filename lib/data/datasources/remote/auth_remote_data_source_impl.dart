@@ -4,6 +4,7 @@ import 'package:auth_app/data/datasources/remote/auth_remote_data_source.dart';
 import 'package:auth_app/domain/models/user.dart';
 import 'package:auth_app/domain/models/login_params.dart';
 import 'package:auth_app/domain/models/register_params.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final Dio _dio;
@@ -28,17 +29,47 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         ),
       );
 
+      debugPrint('Login Response: ${response.data}');
+
       if (response.statusCode == 200) {
         final responseData = response.data;
-        if (responseData is Map<String, dynamic>) {
-          return User.fromJson(responseData);
+
+        if (responseData['statusCode'] == 200 &&
+            responseData['data'] != null &&
+            responseData['data']['data'] != null) {
+          final userData = responseData['data']['data'] as Map<String, dynamic>;
+          final token = responseData['data']['accessToken'] as String;
+
+          // Debug logları
+          debugPrint('Full userData: $userData');
+          debugPrint('Name from API: ${userData['name']}');
+          debugPrint('Code from API: ${userData['code']}');
+
+          // User modelini oluştur
+          final user = User.fromJson({
+            'id': userData['id']?.toString(),
+            'customerCode': userData['code']?.toString(),
+            'name': userData['name']?.toString() ??
+                userData['code']?.toString() ??
+                'Kullanıcı',
+            'email': userData['email']?.toString(),
+            'token': token,
+            'phone': userData['tel1']?.toString(),
+            'taxOffice': userData['taxOffice']?.toString(),
+          });
+
+          // Debug log - oluşturulan user objesi
+          debugPrint('Created User object name: ${user.name}');
+
+          return user;
         } else {
-          throw Exception('Invalid response format');
+          throw Exception('Invalid response structure');
         }
       } else {
         throw Exception('Failed to login');
       }
     } catch (e) {
+      debugPrint('Login Error: $e');
       throw Exception('Failed to login: $e');
     }
   }

@@ -46,4 +46,31 @@ class RegisterParams {
     required this.filePath3,
     required this.filePath4,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'customerType': customerType,
+      'fullName': fullName,
+      'email': email,
+      'phone': phone,
+      'taxOffice': taxOffice,
+      'taxNumber': taxNumber,
+      'isAccessories': isAccessories ? 1 : 0,
+      'isService': isService ? 1 : 0,
+      'isAvm': isAvm ? 1 : 0,
+      'isOil': isOil ? 1 : 0,
+      'isOto': isOto ? 1 : 0,
+      'isMarket': isMarket ? 1 : 0,
+      'address': address,
+      'address2': address2,
+      'country': country,
+      'city': city,
+      'region': region,
+      'postalCode': postalCode,
+      'filePath1': filePath1,
+      'filePath2': filePath2,
+      'filePath3': filePath3,
+      'filePath4': filePath4,
+    };
+  }
 }

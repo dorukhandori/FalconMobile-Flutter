@@ -1,8 +1,9 @@
 class User {
-  final String? id;
-  final String? customerCode;
-  final String? fullName;
-  final String? email;
+  final String id;
+  final String customerCode;
+  final String name;
+  final String email;
+  final String token;
   final String? phone;
   final String? taxOffice;
   final String? taxNumber;
@@ -25,10 +26,11 @@ class User {
   final String? filePath4;
 
   User({
-    this.id,
-    this.customerCode,
-    this.fullName,
-    this.email,
+    required this.id,
+    required this.customerCode,
+    required this.name,
+    required this.email,
+    required this.token,
     this.phone,
     this.taxOffice,
     this.taxNumber,
@@ -53,10 +55,11 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id']?.toString(),
-      customerCode: json['customerCode']?.toString(),
-      fullName: json['fullName']?.toString(),
-      email: json['email']?.toString(),
+      id: json['id']?.toString() ?? '',
+      customerCode: json['customerCode']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      token: json['token']?.toString() ?? '',
       phone: json['phone']?.toString(),
       taxOffice: json['taxOffice']?.toString(),
       taxNumber: json['taxNumber']?.toString(),
@@ -84,8 +87,9 @@ class User {
     return {
       'id': id,
       'customerCode': customerCode,
-      'fullName': fullName,
+      'name': name,
       'email': email,
+      'token': token,
       'phone': phone,
       'taxOffice': taxOffice,
       'taxNumber': taxNumber,

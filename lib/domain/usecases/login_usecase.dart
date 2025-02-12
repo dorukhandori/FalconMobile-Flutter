@@ -3,15 +3,18 @@ import 'package:auth_app/core/errors/failure.dart';
 import 'package:auth_app/domain/models/user.dart';
 import 'package:auth_app/domain/models/login_params.dart';
 import 'package:auth_app/domain/repositories/auth_repository.dart';
-import 'package:auth_app/domain/usecases/usecase.dart';
 
-class LoginUseCase implements UseCase<User, LoginParams> {
-  final AuthRepository repository;
+class LoginUseCase {
+  final AuthRepository _authRepository;
 
-  const LoginUseCase(this.repository);
+  LoginUseCase(this._authRepository);
 
-  @override
-  Future<Either<Failure, User>> call(LoginParams params) {
-    return repository.login(params);
+  Future<Either<Failure, User>> call(LoginParams params) async {
+    try {
+      final result = await _authRepository.login(params);
+      return result;
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 }

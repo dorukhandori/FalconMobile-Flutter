@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:auth_app/core/di/injection.dart';
 import 'package:auth_app/presentation/auth/pages/login_page.dart';
 import 'package:auth_app/presentation/auth/pages/signup_page.dart';
+import 'package:auth_app/presentation/home/home_page.dart';
+import 'package:auth_app/presentation/common/widgets/app_bar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +54,14 @@ class MyApp extends StatelessWidget {
           contentPadding: const EdgeInsets.all(16),
         ),
       ),
-      home: const LoginPage(), // Login sayfasını başlangıç sayfası yap
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const LoginPage(),
+        '/signup': (context) => SignUpPage(),
+      },
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(builder: (context) => const LoginPage());
+      },
       debugShowCheckedModeBanner: false,
     );
   }
