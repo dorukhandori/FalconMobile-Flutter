@@ -59,19 +59,21 @@ class AuthController extends StateNotifier<SignupState> {
       : super(SignupState.initial());
 
   Future<void> login(LoginParams params, BuildContext context) async {
-    state = SignupState.loading();
     try {
+      state = SignupState.loading();
       final result = await _authRepository.login(params);
+
       result.fold(
         (failure) {
           state = SignupState.error(failure.message);
+          debugPrint('Login error: ${failure.message}');
         },
         (success) {
           state = SignupState.success();
-          debugPrint('Login successful, username: ${success.name}');
+          debugPrint('Login successful: $success');
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) => HomePage(user: success),
+              builder: (context) => HomePage(userName: success.name),
             ),
           );
         },
@@ -83,7 +85,13 @@ class AuthController extends StateNotifier<SignupState> {
   }
 
   void logout() {
-    state = SignupState.initial();
+    try {
+      state = SignupState.initial();
+      debugPrint('Logout successful');
+    } catch (e) {
+      state = SignupState.error(e.toString());
+      debugPrint('Logout error: $e');
+    }
   }
 
   Future<void> uploadFilesAndRegister(RegisterData registerData) async {

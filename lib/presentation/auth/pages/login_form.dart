@@ -13,7 +13,7 @@ class LoginForm extends ConsumerStatefulWidget {
 class _LoginFormState extends ConsumerState<LoginForm> {
   final TextEditingController _customerCodeController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _isPasswordVisible = false; // Şifre görünürlüğü durumu
+  bool _isPasswordVisible = false;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +29,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
         const SizedBox(height: 20),
         TextFormField(
           controller: _passwordController,
-          obscureText: !_isPasswordVisible, // Şifre görünürlüğü
+          obscureText: !_isPasswordVisible,
           decoration: InputDecoration(
             labelText: 'Şifre',
             border: const OutlineInputBorder(),
@@ -40,8 +40,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
               ),
               onPressed: () {
                 setState(() {
-                  _isPasswordVisible =
-                      !_isPasswordVisible; // Durumu tersine çevir
+                  _isPasswordVisible = !_isPasswordVisible;
                 });
               },
             ),
