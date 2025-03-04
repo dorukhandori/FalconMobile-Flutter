@@ -1,20 +1,23 @@
 import 'package:dio/dio.dart';
 import 'package:auth_app/core/network/dio_client.dart';
+import 'package:auth_app/core/error/exceptions.dart';
 import 'package:auth_app/data/datasources/remote/auth_remote_data_source.dart';
 import 'package:auth_app/domain/models/user.dart';
 import 'package:auth_app/domain/models/login_params.dart';
 import 'package:auth_app/domain/models/register_params.dart';
 import 'package:flutter/foundation.dart';
+import 'package:auth_app/domain/models/banner.dart';
+import 'package:auth_app/core/utils/jwt_utils.dart';
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-  final Dio _dio;
+  final Dio dio;
 
-  AuthRemoteDataSourceImpl(this._dio);
+  AuthRemoteDataSourceImpl(this.dio);
 
   @override
   Future<User> login(LoginParams params) async {
     try {
-      final response = await _dio.post(
+      final response = await dio.post(
         '/v1/Login/token',
         data: {
           'customerCode': params.customerCode,
@@ -40,26 +43,50 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           final userData = responseData['data']['data'] as Map<String, dynamic>;
           final token = responseData['data']['accessToken'] as String;
 
+          // JWT'yi çözümle
+          Map<String, dynamic> decodedToken = JwtUtils.decodeJwt(token);
+          final customerId = decodedToken['customerID'];
+          final userId = decodedToken['userID'];
+
           // Debug logları
-          debugPrint('Full userData: $userData');
-          debugPrint('Name from API: ${userData['name']}');
-          debugPrint('Code from API: ${userData['code']}');
+          debugPrint('Customer ID: $customerId');
+          debugPrint('User ID: $userId');
 
           // User modelini oluştur
           final user = User.fromJson({
-            'id': userData['id']?.toString(),
-            'customerCode': userData['code']?.toString(),
-            'name': userData['name']?.toString() ??
-                userData['code']?.toString() ??
-                'Kullanıcı',
-            'email': userData['email']?.toString(),
             'token': token,
+            'customerCode': userData['code']?.toString() ?? '',
+            'name': userData['name']?.toString() ?? '',
+            'email': userData['email']?.toString() ?? '',
+            'customerId': customerId,
+            'userId': userId,
+            'loginType': 1,
+            'salesmanId': int.tryParse(
+                    userData['authoritySalesman']?['salesmanId']?.toString() ??
+                        '0') ??
+                0,
+            'languageId': 1,
+            'customerType': userData['customerType'] == true ? 1 : 0,
+            'isAccessories': 0,
+            'isService': 0,
+            'isAvm': 0,
+            'isOil': 0,
+            'isOto': 0,
+            'isMarket': 0,
             'phone': userData['tel1']?.toString(),
             'taxOffice': userData['taxOffice']?.toString(),
+            'taxNumber': null,
+            'address': null,
+            'address2': null,
+            'country': null,
+            'city': null,
+            'region': null,
+            'postalCode': null,
+            'filePath1': null,
+            'filePath2': null,
+            'filePath3': null,
+            'filePath4': null,
           });
-
-          // Debug log - oluşturulan user objesi
-          debugPrint('Created User object name: ${user.name}');
 
           return user;
         } else {
@@ -69,8 +96,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         throw Exception('Failed to login');
       }
     } catch (e) {
-      debugPrint('Login Error: $e');
-      throw Exception('Failed to login: $e');
+      debugPrint('Login hatası: $e');
+      throw ServerException(message: e.toString());
     }
   }
 
@@ -79,7 +106,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       print('Register request data: ${params.toJson()}'); // Debug için
 
-      final response = await _dio.post(
+      final response = await dio.post(
         '/v1/Login/registerForm',
         data: params.toJson(),
         options: Options(
@@ -119,10 +146,32 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<void> someApiCall({Options? options}) async {
-    final response = await _dio.post(
+    final response = await dio.post(
       '/v1/someEndpoint', // Uygun endpoint'i buraya yazın
       options: options ?? Options(), // options parametresini kullan
     );
     // Yanıtı işleyin
+  }
+
+  @override
+  Future<List<BannerModel>> fetchBanners() async {
+    try {
+      final response = await dio.post(
+        '/Home/getAnnouncements/',
+        data: {'languageId': '1'},
+      );
+
+      debugPrint('Raw API Response: ${response.data}');
+
+      final List<dynamic> bannerList = response.data as List;
+      final banners =
+          bannerList.map((banner) => BannerModel.fromJson(banner)).toList();
+
+      return banners;
+    } catch (e, stackTrace) {
+      debugPrint('Banner yükleme hatası: $e');
+      debugPrint('Stack trace: $stackTrace');
+      throw ServerException(message: e.toString());
+    }
   }
 }

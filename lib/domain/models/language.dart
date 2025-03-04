@@ -1,34 +1,35 @@
 class Language {
   final int id;
+  final String code;
   final String name;
   final String languageCulture;
-  final String uniqueSeoCode;
-  final String flagImageFileName;
-  final bool published;
-  final int displayOrder;
-  final bool isSelected;
+  final bool isActive;
 
   Language({
     required this.id,
+    required this.code,
     required this.name,
     required this.languageCulture,
-    required this.uniqueSeoCode,
-    required this.flagImageFileName,
-    required this.published,
-    required this.displayOrder,
-    required this.isSelected,
+    required this.isActive,
   });
 
   factory Language.fromJson(Map<String, dynamic> json) {
     return Language(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      languageCulture: json['languageCulture'] as String,
-      uniqueSeoCode: json['uniqueSeoCode'] as String,
-      flagImageFileName: json['flagImageFileName'] as String,
-      published: json['published'] as bool,
-      displayOrder: json['displayOrder'] as int,
-      isSelected: json['isSelected'] as bool,
+      id: json['id'] ?? 0,
+      code: json['code'] ?? '',
+      name: json['name'] ?? '',
+      languageCulture: json['languageCulture'] ?? json['code'] ?? 'tr-TR',
+      isActive: json['isActive'] ?? false,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'code': code,
+      'name': name,
+      'languageCulture': languageCulture,
+      'isActive': isActive,
+    };
   }
 }

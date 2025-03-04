@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:auth_app/presentation/common/widgets/app_bar.dart';
 
+import '../../../domain/models/product.dart';
+
 // Renk sabitleri
 const Color primaryColor = Color(0xFF1B3E41); // Koyu yeşil-mavi
 const Color accentColor = Color(0xFF4A90A4); // Açık mavi
 const Color backgroundColor = Color(0xFFF5F6F8); // Açık gri arkaplan
 
 class ProductDetailPage extends ConsumerStatefulWidget {
-  final String productId;
+  final Product product;
 
-  const ProductDetailPage({Key? key, required this.productId})
-      : super(key: key);
+  const ProductDetailPage({
+    super.key,
+    required this.product,
+  });
 
   @override
   ConsumerState<ProductDetailPage> createState() => _ProductDetailPageState();
@@ -33,7 +37,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ürün Detayı'),
+        title: Text(widget.product.productName),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -45,7 +49,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage>
           children: [
             // Ana ürün görseli
             Image.network(
-              selectedImage,
+              widget.product.imageUrl,
               width: double.infinity,
               height: 300,
               fit: BoxFit.cover,
@@ -103,19 +107,29 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'MAGİC DOSE MULTİ SPRAY WILD FLOWER 350 ML-KIRÇİÇEĞ',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    'Ürün Kodu: ${widget.product.productCode}',
+                    style: const TextStyle(fontSize: 16),
                   ),
                   const SizedBox(height: 8),
-                  Text('Ürün Kodu: FA1-364',
-                      style: Theme.of(context).textTheme.bodyMedium),
+                  Text(
+                    'Fiyat: ${widget.product.netPrice.toStringAsFixed(2)} TL',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
                   const SizedBox(height: 16),
-                  _buildInfoRow('Barkod', '00000000000'),
-                  _buildInfoRow('Birim', 'ADET'),
-                  _buildInfoRow('Liste Fiyat', '115.00 TL'),
-                  _buildInfoRow('İskonto', '-'),
-                  _buildInfoRow('Net Fiyat', '115.00 TL'),
-                  _buildInfoRow('Kdv\'li Net Fiyat', '135.70 TL'),
+                  _buildInfoRow('Barkod', widget.product.barcode ?? '-'),
+                  _buildInfoRow('Birim', widget.product.unit ?? 'ADET'),
+                  _buildInfoRow('Liste Fiyat',
+                      '${widget.product.listPrice.toStringAsFixed(2)} TL'),
+                  _buildInfoRow('İskonto',
+                      '${widget.product.discountRate.toStringAsFixed(2)}%'),
+                  _buildInfoRow('Net Fiyat',
+                      '${widget.product.netPrice.toStringAsFixed(2)} TL'),
+                  _buildInfoRow('Kdv\'li Net Fiyat',
+                      '${widget.product.netPriceWithVAT.toStringAsFixed(2)} TL'),
                 ],
               ),
             ),

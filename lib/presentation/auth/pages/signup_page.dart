@@ -514,11 +514,10 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
                 ],
               ),
             ),
-            signupState.when(
-              initial: () => const SizedBox.shrink(),
-              loading: () => const CircularProgressIndicator(),
-              success: () => const Text('Kayıt işlemi başarılı!'),
-              error: (message) => Text('Kayıt işlemi başarısız: $message'),
+            signupState.maybeMap(
+              error: (state) =>
+                  Text('Kayıt işlemi başarısız: ${state.message}'),
+              orElse: () => const SizedBox.shrink(),
             ),
           ],
         ),

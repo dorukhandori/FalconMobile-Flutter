@@ -18,7 +18,7 @@ class UploadService {
     'doc',
     'docx'
   ];
-  static const String _baseUrl = 'https://testapi.epic-soft.net';
+  static const String _baseUrl = 'https://testapi.allprox.com.tr';
   static const String _xcmzkey =
       'NX3qKA25bqwquuFdOcckvNdWkZYIy0RF4tNw+hwgYS43jsm07rwosdpO0Meh1I/gzVXt580rIOGdYFMBDLwo3vBfFxeuOPvu6x0Fa+n2s/XPcHVaCiEnoL0mdN3pCOPLv4UnPBJZGtZdEYwo1//0qHdif7TcnvrWUCyGtJLUTR/eOLo4bY64d5tebRU/wovQ';
 

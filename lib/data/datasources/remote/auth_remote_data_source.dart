@@ -1,6 +1,7 @@
-import 'package:auth_app/domain/models/user.dart';
+import 'package:auth_app/domain/models/banner.dart';
 import 'package:auth_app/domain/models/login_params.dart';
 import 'package:auth_app/domain/models/register_params.dart';
+import 'package:auth_app/domain/models/user.dart';
 import 'package:dio/dio.dart';
 
 abstract class AuthRemoteDataSource {
@@ -8,4 +9,5 @@ abstract class AuthRemoteDataSource {
   Future<User> register(RegisterParams params);
   Future<void> logout();
   Future<void> someApiCall({Options? options});
+  Future<List<BannerModel>> fetchBanners();
 }

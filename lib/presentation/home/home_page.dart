@@ -1,3 +1,4 @@
+import 'package:auth_app/presentation/home/providers/product_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:auth_app/presentation/common/widgets/app_bar.dart';
@@ -14,6 +15,8 @@ import '../../domain/models/currency.dart';
 import '../../domain/models/language.dart';
 import '../../core/utils/preferences.dart';
 import 'package:auth_app/presentation/home/providers/announcement_provider.dart';
+import '../../../domain/models/product.dart';
+import 'providers/product_providers.dart';
 
 // Renk sabitleri
 const Color primaryColor = Color(0xFF1B3E41); // Koyu yeşil-mavi
@@ -29,32 +32,37 @@ final selectedFiltersProvider = StateProvider<List<String>>((ref) => []);
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
 // Örnek ürün listesi oluşturalım (gerçek verilerle değiştirilecek)
-final List<Map<String, dynamic>> products = [
-  {
-    'id': 'FA1-364',
-    'name': 'MAGİC DOSE MULTİ SPRAY WILD FLOWER 350 ML-KIRÇİÇEĞ',
-    'price': '115.00',
-    'image': 'https://via.placeholder.com/150',
-    'discount': 24,
-  },
-  {
-    'id': 'FA1-365',
-    'name': 'Başka Bir Ürün',
-    'price': '99.99',
-    'image': 'https://via.placeholder.com/150',
-    'discount': 15,
-  },
+final List<Product> products = [
+  Product(
+    productCode: 'FA1-364',
+    productName: 'MAGİC DOSE MULTİ SPRAY WILD FLOWER 350 ML-KIRÇİÇEĞ',
+    listPrice: 150.0,
+    discountRate: 24,
+    netPrice: 114.0,
+    netPriceWithVAT: 136.8,
+    imageUrl: 'https://via.placeholder.com/150',
+    isFavorite: false,
+  ),
+  Product(
+    productCode: 'FA1-365',
+    productName: 'Başka Bir Ürün',
+    listPrice: 100.0,
+    discountRate: 15,
+    netPrice: 85.0,
+    netPriceWithVAT: 102.0,
+    imageUrl: 'https://via.placeholder.com/150',
+    isFavorite: false,
+  ),
   // ... diğer ürünler
 ];
 
-final filteredProductsProvider =
-    StateProvider<List<Map<String, dynamic>>>((ref) {
+final filteredProductsProvider = StateProvider<List<Product>>((ref) {
   final selectedFilters = ref.watch(selectedFiltersProvider);
   if (selectedFilters.isEmpty) return products;
 
   return products.where((product) {
     if (selectedFilters.contains('discounted')) {
-      return product['discount'] != null && product['discount'] > 0;
+      return product.discountRate > 0;
     }
     // Diğer filtre koşulları...
     return true;
@@ -62,12 +70,9 @@ final filteredProductsProvider =
 });
 
 class HomePage extends ConsumerStatefulWidget {
-  final String? userName;
+  final User user;
 
-  const HomePage({
-    super.key,
-    this.userName,
-  });
+  const HomePage({super.key, required this.user});
 
   @override
   ConsumerState<HomePage> createState() => _HomePageState();
@@ -329,6 +334,27 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
+            // Yeni Ürünler Bölümü
+            _buildProductSection(
+              title: 'Yeni Ürünler',
+              provider: newProductsProvider,
+            ),
+
+            // Kampanyalı Ürünler Bölümü
+            _buildProductSection(
+              title: 'Kampanyalı Ürünler',
+              provider: campaignProductsProvider,
+            ),
+
+            // Favori Ürünler Bölümü
+            _buildProductSection(
+              title: 'Favori Ürünler',
+              provider: favoriteProductsProvider,
+            ),
+
+            // Popüler Kategoriler
+            _buildPopularCategories(),
+
             // Products - Kategoriye göre filtreleme
             Padding(
               padding: const EdgeInsets.all(16),
@@ -358,8 +384,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                       final product =
                           ref.watch(filteredProductsProvider)[index];
                       return _buildProductCard(
-                        category: selectedCategory,
-                        context: context,
                         product: product,
                       );
                     },
@@ -577,14 +601,24 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _buildCategoryChip(String label,
-      {bool isSelected = false, VoidCallback? onTap}) {
+  Widget _buildCategoryChip(
+    String label, {
+    bool isSelected = false,
+    IconData? icon,
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(right: 8),
         child: Chip(
-          label: Text(label),
+          label: Row(
+            children: [
+              if (icon != null) Icon(icon, size: 16),
+              const SizedBox(width: 4),
+              Text(label),
+            ],
+          ),
           backgroundColor: isSelected ? primaryColor : Colors.grey[200],
           labelStyle: TextStyle(
             color: isSelected ? Colors.white : Colors.black,
@@ -595,16 +629,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildProductCard({
-    required String category,
-    required BuildContext context,
-    required Map<String, dynamic> product,
+    required Product product,
   }) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProductDetailPage(productId: product['id']),
+            builder: (context) => ProductDetailPage(product: product),
           ),
         );
       },
@@ -614,93 +646,63 @@ class _HomePageState extends ConsumerState<HomePage> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withOpacity(0.2),
               spreadRadius: 1,
               blurRadius: 5,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Ürün Görseli
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                  image: DecorationImage(
-                    image: NetworkImage(product['image']),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Stack(
-                  children: [
-                    if (product['discount'] != null)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '-${product['discount']}% OFF',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(12)),
+                child: Image.network(
+                  product.imageUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
                 ),
               ),
             ),
-            // Ürün Bilgileri
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    product['name'],
+                    product.productName,
                     style: const TextStyle(
-                      fontSize: 14,
                       fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '₺${product['price']}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.purple[700],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  Row(
+                    children: [
+                      Text(
+                        '${product.netPrice.toStringAsFixed(2)} TL',
+                        style: TextStyle(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
                         ),
                       ),
-                      child: const Text('Sepete Ekle'),
-                    ),
+                      const SizedBox(width: 8),
+                      if (product.discountRate > 0)
+                        Text(
+                          '${product.listPrice.toStringAsFixed(2)} TL',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
@@ -780,5 +782,75 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     // Filtrelenmiş ürünleri göster
     // Bu kısımda state management kullanarak UI'ı güncelleyebilirsiniz
+  }
+
+  Widget _buildProductSection({
+    required String title,
+    required AutoDisposeFutureProvider<List<Product>> provider,
+  }) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final productsAsync = ref.watch(provider);
+        return productsAsync.when(
+          loading: () => const CircularProgressIndicator(),
+          error: (error, _) => Text('Hata: $error'),
+          data: (products) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.7,
+                ),
+                itemCount: products.length,
+                itemBuilder: (context, index) => _buildProductCard(
+                  product: products[index],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPopularCategories() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Popüler Kategoriler',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildCategoryChip('Elektronik', icon: Icons.computer),
+                _buildCategoryChip('Giyim', icon: Icons.checkroom),
+                _buildCategoryChip('Kozmetik', icon: Icons.spa),
+                _buildCategoryChip('Spor', icon: Icons.sports_soccer),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

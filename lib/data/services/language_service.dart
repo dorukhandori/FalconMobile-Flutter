@@ -4,13 +4,13 @@ import 'package:auth_app/domain/models/language.dart';
 import 'package:flutter/foundation.dart';
 
 class LanguageService {
-  final Dio _dio;
+  final Dio dio;
 
-  LanguageService(this._dio);
+  LanguageService(this.dio);
 
   Future<List<Language>> getLanguageList() async {
     try {
-      final response = await _dio.post(
+      final response = await dio.post(
         '/v1/Login/getLanguageList',
         options: Options(
           headers: {

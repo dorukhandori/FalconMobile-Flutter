@@ -14,7 +14,7 @@ import 'package:auth_app/data/datasources/remote/auth_remote_data_source_impl.da
 import 'package:auth_app/data/services/upload_service.dart';
 import 'package:auth_app/presentation/language/controllers/language_controller.dart';
 
-final getIt = GetIt.instance;
+final GetIt getIt = GetIt.instance;
 
 @InjectableInit(
   initializerName: 'init',
@@ -25,7 +25,16 @@ Future<void> configureDependencies() async {
   final prefs = await SharedPreferences.getInstance();
   getIt.registerSingleton<SharedPreferences>(prefs);
 
-  final dio = await DioClient.getInstance();
+  // Riverpod ProviderContainer'ını kaydedelim
+  getIt.registerSingleton<ProviderContainer>(ProviderContainer());
+
+  // DioClient'ı yeni base URL ile oluştur
+  final dio = DioClient.getInstance(
+    encryptedCustomerId: 'your_encrypted_customer_id',
+  );
+
+  // Dio'yu GetIt'e kaydedin
+  getIt.registerSingleton<Dio>(dio);
 
   // Remote Data Source
   final authRemoteDataSource = AuthRemoteDataSourceImpl(dio);
@@ -38,7 +47,7 @@ Future<void> configureDependencies() async {
   getIt.registerSingleton<AuthRepository>(
       AuthRepositoryImpl(getIt<AuthService>()));
 
-  getIt.registerSingleton<LanguageService>(LanguageService(dio));
+  getIt.registerSingleton<LanguageService>(LanguageService(getIt<Dio>()));
   getIt.registerSingleton(CurrencyService(dio));
 
   // Upload Service kaydı
@@ -46,13 +55,17 @@ Future<void> configureDependencies() async {
 
   // LanguageController kaydı
   getIt.registerSingleton<LanguageController>(
-      LanguageController(getIt<LanguageService>()));
+      LanguageController.withService(getIt<LanguageService>()));
+
+  // Diğer servis kayıtları...
 }
 
 @module
 abstract class AppModule {
   @singleton
-  Dio get dio => DioClient.getInstance();
+  Dio get dio => DioClient.getInstance(
+        encryptedCustomerId: 'your_encrypted_customer_id',
+      );
 
   @singleton
   AuthRemoteDataSource get authRemoteDataSource =>
@@ -93,9 +106,15 @@ final authServiceProvider = Provider<AuthService>((ref) {
 });
 
 final dioProvider = Provider<Dio>((ref) {
-  return DioClient.getInstance();
+  final encryptedCustomerId =
+      "your_encrypted_customer_id"; // Buraya uygun bir değer atayın
+  return getDio(encryptedCustomerId);
 });
 
 final uploadServiceProvider = Provider<UploadService>((ref) {
   return UploadService(ref.watch(dioProvider));
 });
+
+Dio getDio(String encryptedCustomerId) {
+  return DioClient.getInstance(encryptedCustomerId: encryptedCustomerId);
+}
