@@ -7,6 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'package:auth_app/domain/models/user.dart';
 import 'package:auth_app/presentation/home/pages/home_page.dart';
 import 'package:auth_app/presentation/auth/pages/login_page.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:auth_app/services/session_service.dart';
 
 // Şehir listesi için provider
 final cityListProvider =
@@ -168,6 +171,8 @@ class _CustomerSelectScreenState extends ConsumerState<CustomerSelectScreen> {
   List<Map<String, dynamic>> _cities = [];
   List<Map<String, dynamic>> _towns = [];
   List<Map<String, dynamic>> _customers = [];
+  String? _error;
+  final SessionService _sessionService = SessionService();
 
   @override
   void initState() {
@@ -268,88 +273,74 @@ class _CustomerSelectScreenState extends ConsumerState<CustomerSelectScreen> {
     }
   }
 
-  Future<void> _loadCustomers({bool isLoadMore = false}) async {
-    if (isLoadMore) {
-      setState(() {
-        _isLoadingMore = true;
-      });
-    } else {
-      setState(() {
-        _isLoading = true;
-        _currentCount = 24;
-      });
+  Future<void> _loadCustomers() async {
+    if (kDebugMode) {
+      print('_loadCustomers metodu başladı');
     }
-
-    try {
-      final dio = DioClient.getInstance();
-      final headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${widget.token}',
-        'xcmzkey':
-            'NX3qKA25bqwquuFdOcckvNdWkZYIy0RF4tNw+hwgYS43jsm07rwosdpO0Meh1I/gzVXt580rIOGdYFMBDLwo3vBfFxeuOPvu6x0Fa+n2s/XPcHVaCiEnoL0mdN3pCOPLv4UnPBJZGtZdEYwo1//0qHdif7TcnvrWUCyGtJLUTR/eOLo4bY64d5tebRU/wovQ',
-      };
-
-      final data = {
-        "codeOrName": _searchController.text,
-        "city": _selectedCity,
-        "town": _selectedTown,
-        "basketType": _basketType,
-        "count": _currentCount,
-        "customerType": widget.customerType,
-        "salesmanId": widget.salesmanId,
-      };
-
-      if (kDebugMode) {
-        print('Customer List Request: $data');
-      }
-
-      final response = await dio.post(
-        '/CustomerSelect/getCustomerSelectData',
-        options: Options(headers: headers),
-        data: data,
-      );
-
-      if (kDebugMode) {
-        print('Customer List Response: ${response.data}');
-      }
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = response.data is List ? response.data : [];
-        setState(() {
-          if (isLoadMore) {
-            _customers.addAll(
-                data.map((item) => item as Map<String, dynamic>).toList());
-          } else {
-            _customers =
-                data.map((item) => item as Map<String, dynamic>).toList();
-          }
-          _isLoading = false;
-          _isLoadingMore = false;
-        });
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Customer List Error: $e');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Müşteri listesi yüklenemedi: $e')),
-      );
-      setState(() {
-        _isLoading = false;
-        _isLoadingMore = false;
-      });
+    await _fetchCustomers();
+    if (kDebugMode) {
+      print('_loadCustomers metodu tamamlandı');
     }
   }
 
-  void _listCustomers() {
-    _loadCustomers();
-  }
-
-  void _loadMore() {
+  Future<void> _loadMore() async {
     setState(() {
+      _isLoadingMore = true;
       _currentCount += 24;
     });
-    _loadCustomers(isLoadMore: true);
+
+    // Provider'ı kullanarak istek at
+    final params = {
+      'token': widget.token,
+      'codeOrName': _searchController.text,
+      'city': _selectedCity,
+      'town': _selectedTown,
+      'basketType': _basketType,
+      'count': _currentCount,
+      'customerType': true,
+      'salesmanId': widget.salesmanId,
+    };
+
+    if (kDebugMode) {
+      print('customerListProvider parametreleri (loadMore): $params');
+    }
+
+    // Provider'ı yeniden yükle
+    ref.refresh(customerListProvider(params));
+
+    // Provider'dan gelen verileri dinle
+    ref.listen<AsyncValue<List<Map<String, dynamic>>>>(
+      customerListProvider(params),
+      (previous, next) {
+        next.when(
+          data: (customers) {
+            if (kDebugMode) {
+              print(
+                  'Müşteri listesi alındı (loadMore): ${customers.length} müşteri');
+            }
+            setState(() {
+              _customers = customers;
+              _isLoadingMore = false;
+            });
+          },
+          loading: () {
+            if (kDebugMode) {
+              print('Müşteri listesi yükleniyor (loadMore)...');
+            }
+            // Burada _isLoadingMore zaten true olarak ayarlandı
+          },
+          error: (error, stackTrace) {
+            if (kDebugMode) {
+              print('Müşteri listesi alınamadı (loadMore): $error');
+            }
+            setState(() {
+              _isLoadingMore = false;
+              _error = 'Müşteri listesi alınamadı: $error';
+            });
+          },
+        );
+      },
+    );
   }
 
   void _clearFilters() {
@@ -390,6 +381,181 @@ class _CustomerSelectScreenState extends ConsumerState<CustomerSelectScreen> {
     );
   }
 
+  Future<void> _fetchCustomers() async {
+    if (kDebugMode) {
+      print('_fetchCustomers metodu başladı');
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final session = await _sessionService.getSession();
+      final token = session?.accessToken ?? '';
+
+      if (token.isEmpty) {
+        if (kDebugMode) {
+          print('Token bulunamadı, widget.token kullanılıyor');
+        }
+        // Session'dan token alınamadıysa, widget'tan gelen token'ı kullan
+        final token = widget.token;
+
+        if (token.isEmpty) {
+          setState(() {
+            _isLoading = false;
+            _error = 'Token bulunamadı. Lütfen tekrar giriş yapın.';
+          });
+          return;
+        }
+      }
+
+      // Dio client'ı kullanarak istek at
+      final dio = DioClient.getInstance();
+
+      if (kDebugMode) {
+        print('Dio client oluşturuldu');
+      }
+
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${widget.token}',
+        'xcmzkey':
+            'NX3qKA25bqwquuFdOcckvNdWkZYIy0RF4tNw+hwgYS43jsm07rwosdpO0Meh1I/gzVXt580rIOGdYFMBDLwo3vBfFxeuOPvu6x0Fa+n2s/XPcHVaCiEnoL0mdN3pCOPLv4UnPBJZGtZdEYwo1//0qHdif7TcnvrWUCyGtJLUTR/eOLo4bY64d5tebRU/wovQ',
+      };
+
+      final requestBody = {
+        'codeOrName': _searchController.text,
+        'city': _selectedCity,
+        'town': _selectedTown,
+        'basketType': _basketType,
+        'count': _currentCount,
+        'customerType': true, // Burayı true olarak sabitledik
+        'salesmanId': widget.salesmanId,
+      };
+
+      if (kDebugMode) {
+        print(
+            'Customer Select Request URL: /CustomerSelect/getCustomerSelectData');
+        print('Customer Select Request Body: $requestBody');
+      }
+
+      if (kDebugMode) {
+        print('HTTP isteği gönderiliyor...');
+      }
+
+      final response = await dio.post(
+        '/CustomerSelect/getCustomerSelectData',
+        options: Options(headers: headers),
+        data: requestBody,
+      );
+
+      if (kDebugMode) {
+        print('HTTP isteği tamamlandı');
+        print('Customer Select Response Status: ${response.statusCode}');
+        print('Customer Select Response Data: ${response.data}');
+      }
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data is List ? response.data : [];
+        setState(() {
+          _customers =
+              data.map((item) => item as Map<String, dynamic>).toList();
+          _isLoading = false;
+        });
+
+        if (kDebugMode) {
+          print('Müşteri listesi güncellendi: ${_customers.length} müşteri');
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+          _error = 'Müşteri listesi alınamadı: ${response.statusCode}';
+        });
+
+        if (kDebugMode) {
+          print('Müşteri listesi alınamadı: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('_fetchCustomers metodu hata ile sonlandı: $e');
+      }
+      setState(() {
+        _isLoading = false;
+        _error = 'Müşteri listesi alınamadı: $e';
+      });
+    }
+  }
+
+  void _listCustomers() {
+    if (kDebugMode) {
+      print('_listCustomers metodu çağrıldı');
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+      _customers = []; // Listeyi temizle
+      _currentCount = 24; // Sayacı sıfırla
+    });
+
+    // Provider'ı kullanarak istek at
+    final params = {
+      'token': widget.token,
+      'codeOrName': _searchController.text,
+      'city': _selectedCity,
+      'town': _selectedTown,
+      'basketType': _basketType,
+      'count': _currentCount,
+      'customerType': true,
+      'salesmanId': widget.salesmanId,
+    };
+
+    if (kDebugMode) {
+      print('customerListProvider parametreleri: $params');
+    }
+
+    // Provider'ı yeniden yükle
+    ref.refresh(customerListProvider(params));
+
+    // Provider'dan gelen verileri dinle
+    ref.listen<AsyncValue<List<Map<String, dynamic>>>>(
+      customerListProvider(params),
+      (previous, next) {
+        next.when(
+          data: (customers) {
+            if (kDebugMode) {
+              print('Müşteri listesi alındı: ${customers.length} müşteri');
+            }
+            setState(() {
+              _customers = customers;
+              _isLoading = false;
+            });
+          },
+          loading: () {
+            if (kDebugMode) {
+              print('Müşteri listesi yükleniyor...');
+            }
+            setState(() {
+              _isLoading = true;
+            });
+          },
+          error: (error, stackTrace) {
+            if (kDebugMode) {
+              print('Müşteri listesi alınamadı: $error');
+            }
+            setState(() {
+              _isLoading = false;
+              _error = 'Müşteri listesi alınamadı: $error';
+            });
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -409,7 +575,7 @@ class _CustomerSelectScreenState extends ConsumerState<CustomerSelectScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadCustomers,
+            onPressed: _listCustomers,
           ),
         ],
       ),
@@ -536,7 +702,12 @@ class _CustomerSelectScreenState extends ConsumerState<CustomerSelectScreen> {
                         children: [
                           Expanded(
                             child: ElevatedButton(
-                              onPressed: _listCustomers,
+                              onPressed: () {
+                                if (kDebugMode) {
+                                  print('Listele butonuna tıklandı');
+                                }
+                                _listCustomers();
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF1B3E41),
                                 foregroundColor: Colors.white,
@@ -571,116 +742,149 @@ class _CustomerSelectScreenState extends ConsumerState<CustomerSelectScreen> {
 
                 // Müşteri listesi
                 Expanded(
-                  child: _customers.isEmpty
-                      ? const Center(child: Text('Müşteri bulunamadı'))
-                      : ListView.builder(
-                          itemCount: _customers.length +
-                              1, // +1 for "Load More" button
-                          itemBuilder: (context, index) {
-                            if (index == _customers.length) {
-                              // "Load More" button
-                              return Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: ElevatedButton(
-                                  onPressed: _isLoadingMore ? null : _loadMore,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1B3E41),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(_error!,
+                                      style:
+                                          const TextStyle(color: Colors.red)),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    onPressed: _listCustomers,
+                                    child: const Text('Tekrar Dene'),
                                   ),
-                                  child: _isLoadingMore
-                                      ? const CircularProgressIndicator()
-                                      : const Text('Daha Fazla Göster'),
-                                ),
-                              );
-                            }
-
-                            final customer = _customers[index];
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                                ],
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'KOD: ${customer['code'] ?? ''}',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
+                            )
+                          : _customers.isEmpty
+                              ? const Center(child: Text('Müşteri bulunamadı'))
+                              : ListView.builder(
+                                  itemCount: _customers.length +
+                                      (_isLoadingMore ? 1 : 1),
+                                  itemBuilder: (context, index) {
+                                    if (index == _customers.length) {
+                                      // "Load More" button or loading indicator
+                                      return Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Center(
+                                          child: _isLoadingMore
+                                              ? const CircularProgressIndicator()
+                                              : ElevatedButton(
+                                                  onPressed: _loadMore,
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        const Color(0xFF1B3E41),
+                                                    foregroundColor:
+                                                        Colors.white,
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical: 16),
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                    ),
+                                                  ),
+                                                  child: const Text(
+                                                      'Daha Fazla Göster'),
                                                 ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'AD: ${customer['name'] ?? ''}',
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                  'İL: ${customer['city'] ?? ''}'),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                  'İLÇE: ${customer['town'] ?? ''}'),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                  'TEL: ${customer['tel1'] ?? ''}'),
-                                            ],
-                                          ),
                                         ),
-                                        Column(
+                                      );
+                                    }
+
+                                    // Müşteri kartını göster
+                                    final customer = _customers[index];
+                                    return Card(
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Row(
                                           children: [
-                                            ElevatedButton(
-                                              onPressed: () =>
-                                                  _selectCustomer(customer),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    const Color(0xFF1B3E41),
-                                                foregroundColor: Colors.white,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'KOD: ${customer['code'] ?? ''}',
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    'AD: ${customer['name'] ?? ''}',
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                      'İL: ${customer['city'] ?? ''}'),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                      'İLÇE: ${customer['town'] ?? ''}'),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                      'TEL: ${customer['tel1'] ?? ''}'),
+                                                ],
                                               ),
-                                              child: const Text('Seçiniz'),
                                             ),
-                                            const SizedBox(height: 8),
-                                            OutlinedButton(
-                                              onPressed: () {
-                                                // TODO: Implement visit functionality
-                                              },
-                                              style: OutlinedButton.styleFrom(
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
+                                            Column(
+                                              children: [
+                                                ElevatedButton(
+                                                  onPressed: () =>
+                                                      _selectCustomer(customer),
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                    backgroundColor:
+                                                        const Color(0xFF1B3E41),
+                                                    foregroundColor:
+                                                        Colors.white,
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                    ),
+                                                  ),
+                                                  child: const Text('Seçiniz'),
                                                 ),
-                                              ),
-                                              child: const Text('Ziyaret'),
+                                                const SizedBox(height: 8),
+                                                OutlinedButton(
+                                                  onPressed: () {
+                                                    // Ziyaret işlevselliği
+                                                  },
+                                                  style:
+                                                      OutlinedButton.styleFrom(
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              8),
+                                                    ),
+                                                  ),
+                                                  child: const Text('Ziyaret'),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
-                                  ],
+                                      ),
+                                    );
+                                  },
                                 ),
-                              ),
-                            );
-                          },
-                        ),
                 ),
               ],
             ),
