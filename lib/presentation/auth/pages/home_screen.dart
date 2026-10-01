@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/session_model.dart';
-import '../services/session_service.dart';
-import 'login_screen.dart';
+import '../../../models/session_model.dart';
+import '../../../services/session_service.dart';
+import '../../../screens/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
